@@ -28,6 +28,6 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: poetry run mypy .
+        entry: bash -c "echo $PYTHONPATH && poetry run mypy --explicit-package-bases ."
         language: system
         types: [python]
