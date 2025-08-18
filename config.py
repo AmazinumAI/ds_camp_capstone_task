@@ -6,7 +6,7 @@ class LLMConfig:
 
     TEMPERATURE = 0.0
 
-    MODEL_NAME = "llama3.2"
+    MODEL_NAME = "qwen3"
     TOP_P = 0.7
     TOP_K = 50
     REPETITION_PENALTY = 1
