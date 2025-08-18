@@ -15,7 +15,6 @@ from typing import List, Union
 
 # Thirdparty imports
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from transformers import AutoModel, AutoTokenizer
 
@@ -66,15 +65,16 @@ class TextVectorizer:
             If the specified model cannot be loaded.
         """
         # Load tokenizer and model from HuggingFace
-        self.tokenizer = #TODO: load tokenizer
-        self.model = #TODO: load model
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name)
 
         # Set device based on CUDA availability
-        self.device: str = #TODO: set device, you can use "cuda" or "cpu" directly
+        self.device: str = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
+
         # I recommend using cpu to avoid any issues with CUDA availability
 
         # Move model to the appropriate device
-        self.model...  #TODO: move model to device
+        self.model.to(self.device)
 
     def _average_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         """Perform average pooling on the last hidden states using attention mask.
@@ -104,11 +104,12 @@ class TextVectorizer:
         2. Summing along the sequence dimension
         3. Dividing by the number of actual tokens (not padding)
         """
+        booled_attention_mask = attention_mask.bool()
         # Mask out padding tokens by setting their hidden states to 0
-        last_hidden = #TODO: mask out padding tokens
+        last_hidden = last_hidden_states.masked_fill(~booled_attention_mask[..., None], 0.0)
 
         # Calculate average by summing and dividing by number of actual tokens
-        return #TODO: calculate average pooling
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     def embed(self, texts: Union[List[str], str], is_query: bool = False) -> np.ndarray:
         """Convert text(s) into normalized embedding vectors.
@@ -144,33 +145,48 @@ class TextVectorizer:
         >>> doc_embeddings = vectorizer.embed(docs)
         >>> query_embedding = vectorizer.embed("What is AI?", is_query=True)
         """
+
+        # Check for empty input
+        if not texts:
+            raise ValueError("Input texts must be non-empty")
+        if isinstance(texts, str) and len(texts) == 0:
+            raise ValueError("Input texts must be non-empty")
+        if isinstance(texts, list) and not all(text.strip() for text in texts):
+            raise ValueError("Input texts must be non-empty strings.")
+
         # Convert single string to list for uniform processing
         if isinstance(texts, str):
             texts = [texts]
 
         # Prepend query prefix if this is a query embedding
         if is_query:
-            texts = #TODO: prepend "query: " to each text
+            texts = [f'query: {text}' for text in texts]
 
         # Tokenize texts with padding and truncation
         inputs = self.tokenizer(
-            ...,  #TODO: add inputs and parameters
-            padding=...,  # Pad shorter sequences to match longest
-            truncation=...,  # Truncate longer sequences
-            max_length=...,  # Maximum sequence length
-            return_tensors=...,  # Return PyTorch tensors
-        ).to(...)
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=512,
+            return_tensors="pt",
+        ).to(self.device)
 
         # Generate embeddings without gradient computation (inference mode)
-        with ...:  #TODO: disable gradient computation
+        with torch.no_grad():
             # Get model outputs (last hidden states and attention)
             outputs = self.model(**inputs)
 
+            # Apply dict-style access for attention mask
+            if isinstance(inputs, dict):
+                attention_mask = inputs['attention_mask']
+            else:
+                attention_mask = inputs.attention_mask
+
             # Apply average pooling to get sentence-level embeddings
-            embeddings = ...  #TODO: apply average pooling
+            embeddings = self._average_pool(outputs.last_hidden_state, attention_mask)
 
             # L2 normalize embeddings for cosine similarity compatibility
-            normalized_embeddings = ... #TODO: normalize embeddings
+            normalized_embeddings = embeddings / embeddings.norm(dim=1, keepdim=True)
 
         # Return embeddings as numpy array on CPU
-        return ... #TODO: convert to numpy array and return
+        return normalized_embeddings.cpu().numpy()
