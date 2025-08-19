@@ -46,9 +46,7 @@ class FaissSearchHandler:
         """
         self.dimension: int = dimension
         # Initialize FAISS index with inner product similarity
-        self.index: faiss.IndexFlatIP = faiss.IndexFlatIP(
-            self.dimension
-        )  # TODO: create FAISS index with provided dimension
+        self.index: faiss.IndexFlatIP = faiss.IndexFlatIP(self.dimension)
 
     def _to_float32(self, arr: np.ndarray) -> np.ndarray:
         """gemini sey faiss must be 32bit float (0v0)"""
@@ -71,17 +69,20 @@ class FaissSearchHandler:
             to be indexed. Each row represents a single vector.
         """
         # Add embeddings to the FAISS index
-        # TODO: add embeddings to the index
         if embeddings.ndim != 2:
             raise ValueError("'embeddings' must be a 2D array of shape (n, d).")
 
         if embeddings.shape[1] != self.dimension:
-            raise ValueError(f"Embeddings dimensionality {embeddings.shape[1]} != expected {self.dimension}.")
+            raise ValueError(
+                f"Embeddings dimensionality {embeddings.shape[1]} != expected {self.dimension}."
+            )
 
         emb = self._to_float32(embeddings)
         self.index.add(emb)
 
-    def search(self, query_embedding: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    def search(
+        self, query_embedding: np.ndarray, k: int
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Search for the k most similar vectors to the query embedding.
 
@@ -106,7 +107,6 @@ class FaissSearchHandler:
                 The indices of the k most similar vectors in the original dataset.
         """
         # Perform similarity search and return distances and indices
-        # TODO: perform search on the index with query_embedding and k
 
         if k <= 0:
             raise ValueError("'k' must be a positive integer.")
@@ -119,10 +119,11 @@ class FaissSearchHandler:
             raise ValueError("'query_embedding' must be 2D with shape (n_queries, d).")
 
         if query_embedding.shape[1] != self.dimension:
-            raise ValueError(f"Query dimensionality {query_embedding.shape[1]} != expected {self.dimension}.")
+            raise ValueError(
+                f"Query dimensionality {query_embedding.shape[1]} != expected {self.dimension}."
+            )
         q = self._to_float32(query_embedding)
         distances, indices = self.index.search(q, k)
-
         return distances, indices
 
     def save(self, path: str) -> None:
@@ -137,8 +138,6 @@ class FaissSearchHandler:
             The file path where the index should be saved.
         """
         # Write the FAISS index to the specified file path
-        # TODO: write the index to the file at path
-
         if not path:
             raise ValueError("'path' must be a non-empty string.")
 

@@ -20,7 +20,9 @@ async def lifespan(app: FastAPI):  # type: ignore
     app.state.summarizer_graph = SummarizerAgent("qwen3")
     app.state.vectorizer = TextVectorizer(config.EMBEDDING_MODEL_NAME)
     app.state.products_df = load_and_preprocess_data(config.PRODUCTS_CSV_PATH)
-    print(f"Loaded {len(app.state.products_df)} products from {config.PRODUCTS_CSV_PATH}")
+    print(
+        f"Loaded {len(app.state.products_df)} products from {config.PRODUCTS_CSV_PATH}"
+    )
 
     dimension = app.state.vectorizer.model.config.hidden_size
     app.state.search_index = FaissSearchHandler(dimension)
@@ -62,18 +64,9 @@ async def read_root():  # type: ignore
 
 @app.post("/summarize/", response_model=SummaryOutput)
 async def summarize_text(input_data: TextInput, request: Request):  # type: ignore
-    # summary = ...  #TODO: use summarizer_graph to summarize the input text
-    # return SummaryOutput(summary=summary)
     agent = request.app.state.summarizer_graph
-    summary = agent.execute(input_message=input_data.text)  # TODO: use summarizer_graph to summarize the input text
+    summary = agent.execute(input_message=input_data.text)
     return SummaryOutput(summary=summary)
-
-    # summarizer = request.app.state.summarizer_graph
-    # # Call run() and ensure it's string-like for real use, but allow mocks in tests
-    # summary = summarizer.run(input_data.text)
-    # if not isinstance(summary, str):
-    #     summary = str(summary)
-    # return SummaryOutput(summary=summary)
 
 
 @app.post("/semantic_search/", response_model=SearchOutput)
@@ -83,8 +76,8 @@ async def semantic_search(query: TextInput, request: Request):  # type: ignore
     search_index = request.app.state.search_index
     products_df = request.app.state.products_df
 
-    query_embedding = vectorizer.embed([query.text], is_query=True)  # TODO: embed the query using vectorizer
-    distances, indices = search_index.search(query_embedding, k=5)  # TODO: search the index with query_embedding
+    query_embedding = vectorizer.embed([query.text], is_query=True)
+    distances, indices = search_index.search(query_embedding, k=5)
 
     # Ensure 2D lists
     if isinstance(distances, list) and not isinstance(distances[0], list):
