@@ -14,9 +14,10 @@ skip-string-normalization = true
 
 [tool.mypy]
 disallow_untyped_defs = true
-files = "ds_capstone/**/*.py"
 exclude = "^tests/"
 ignore_missing_imports = true
+explicit_package_bases = true
+
 
 [tool.isort]
 multi_line_output = 3
@@ -47,9 +48,10 @@ fastapi = "^0.115.6"
 python-dotenv = "^1.0.1"
 uvicorn = "^0.34.0"
 faiss-cpu = "^1.11.0.post1"
-torch = "^2.7.1"
+torch = "2.2.2"
 transformers = "^4.54.1"
 pandas = "^2.3.1"
+numpy = "<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
@@ -73,6 +75,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+pythonpath = ["src"]
 
 filterwarnings = [
     "ignore::DeprecationWarning",

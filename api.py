@@ -62,7 +62,8 @@ async def read_root():  # type: ignore
 
 @app.post("/summarize/", response_model=SummaryOutput)
 async def summarize_text(input_data: TextInput, request: Request):  # type: ignore
-    summary = ...  #TODO: use summarizer_graph to summarize the input text
+    summarizer_graph = request.app.state.summarizer_graph
+    summary = summarizer_graph.execute(input_message=input_data.text)
     return SummaryOutput(summary=summary)
 
 
@@ -73,8 +74,9 @@ async def semantic_search(query: TextInput, request: Request):  # type: ignore
     search_index = request.app.state.search_index
     products_df = request.app.state.products_df
 
-    query_embedding = ...  #TODO: embed the query using vectorizer
-    distances, indices = ...  #TODO: search the index with query_embedding
+    query_embedding = vectorizer.embed([query.text], is_query=True)
+
+    distances, indices = search_index.search(query_embedding, k=5)
 
     results = []
     for i, (idx, score) in enumerate(zip(indices[0], distances[0])):
