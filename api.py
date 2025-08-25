@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):  # type: ignore
     else:
         print(f"FAISS index not found at {index_path}. Creating a new one...")
         print("Vectorizing product descriptions...")
-        texts = app.state.products_df['text'].tolist()
+        texts = app.state.products_df["text"].tolist()
         embeddings = app.state.vectorizer.embed(texts)
         print("Building FAISS index...")
         app.state.search_index.build(embeddings)
@@ -62,7 +62,8 @@ async def read_root():  # type: ignore
 
 @app.post("/summarize/", response_model=SummaryOutput)
 async def summarize_text(input_data: TextInput, request: Request):  # type: ignore
-    summary = ...  #TODO: use summarizer_graph to summarize the input text
+    agent = request.app.state.summarizer_graph
+    summary = agent.execute(input_message=input_data.text)
     return SummaryOutput(summary=summary)
 
 
@@ -73,8 +74,14 @@ async def semantic_search(query: TextInput, request: Request):  # type: ignore
     search_index = request.app.state.search_index
     products_df = request.app.state.products_df
 
-    query_embedding = ...  #TODO: embed the query using vectorizer
-    distances, indices = ...  #TODO: search the index with query_embedding
+    query_embedding = vectorizer.embed([query.text], is_query=True)
+    distances, indices = search_index.search(query_embedding, k=5)
+
+    # Ensure 2D lists
+    if isinstance(distances, list) and not isinstance(distances[0], list):
+        distances = [distances]
+    if isinstance(indices, list) and not isinstance(indices[0], list):
+        indices = [indices]
 
     results = []
     for i, (idx, score) in enumerate(zip(indices[0], distances[0])):
@@ -84,10 +91,10 @@ async def semantic_search(query: TextInput, request: Request):  # type: ignore
         results.append(
             SearchResultItem(
                 rank=i + 1,
-                title=product['title'],
-                brand=product['brand'],
-                category=product['category'],
-                description=product['description'],
+                title=product["title"],
+                brand=product["brand"],
+                category=product["category"],
+                description=product["description"],
                 similarity=float(score),
             )
         )

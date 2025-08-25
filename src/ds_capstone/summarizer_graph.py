@@ -26,22 +26,26 @@ Examples
 """
 
 # Standart library imports
-# Standard library imports
+import os
+import sys
 from datetime import datetime
 from typing import Annotated, TypedDict
+from zoneinfo import ZoneInfo
 
 # Thirdparty imports
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
-
-# Third-party imports
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, create_react_agent
 
+# from langchain_community.chat_models import ChatOllama
+
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 # Local imports
 from config import LLMConfig
 
@@ -72,7 +76,7 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
 
-@...  #TODO: define a tool function to get the current date
+@tool
 def get_current_date() -> str:
     """
     Get the current date in a human-readable format.
@@ -158,16 +162,15 @@ class SummarizerAgent:
         model_name : str, optional
             The name of the Ollama model to use, by default "phi3"
         """
+
         # 1. Define the tools the agent can use
-        self.tools = ...  #TODO: define the tools available to the agent
+        self.tools = [get_current_date]
 
         # 2. Set up the language model with temperature from config
-        self.llm = ChatOllama(...)  #TODO: create ChatOllama instance with model_name and temperature from LLMConfig
-
-        # TODO: If you have problems running local Ollama models, you can use OpenAI or Gemini API from Langchain
+        self.llm = ChatOllama(model=model_name, temperature=LLMConfig.TEMPERATURE)
 
         # 3. Bind the tools to the model to enable tool calling capabilities
-        self.model_with_tools = ...  #TODO: bind the tools to the llm
+        self.model_with_tools = self.llm.bind_tools(self.tools)
 
         # 4. Build and compile the graph that defines the agent's logic
         self.graph = self._build_graph()
@@ -240,13 +243,11 @@ class SummarizerAgent:
         )
 
         # Create the processing chain: prompt -> model -> response
-        chain = ...  #TODO: create a chain that uses the prompt_template and model_with_tools
+        chain = prompt_template | self.model_with_tools
 
         # Invoke the chain with the conversation history
-        chain_result = ...  #TODO: invoke the chain with state["messages"] as input
+        chain_result = chain.invoke({"history": state["messages"]})
 
-        # Add the model's response to the message history
-        # Note: Type checking issues here are due to LangGraph's complex typing
         # The add_messages function properly handles message accumulation
         return {"messages": add_messages(state["messages"], chain_result)}  # type: ignore
 
@@ -272,22 +273,17 @@ class SummarizerAgent:
         - "agent" -> "tools" | END: Either call tools or end conversation
         - "tools" -> "agent": Return to agent after tool execution
         """
-        # Initialize the state graph with AgentState structure
+        # Initialize the state graph
         graph_builder = StateGraph(AgentState)
-
-        # Add the main agent node that processes messages and generates responses
-        graph_builder...  #TODO: add node for sum_agent with name "agent"
-
-        # Add the tools node that executes any requested tool calls
         tool_node = ToolNode(self.tools)
-        graph_builder...  #TODO: add node for tool_node with name "tools"
 
-        # Define the conversation flow edges
-        graph_builder...  #TODO: Start with the agent
-        graph_builder...  #TODO: Conditional routing from agent to either tools or end
-        graph_builder...  #TODO: Return to agent after tool execution
+        graph_builder.add_node("agent", self.sum_agent)
+        graph_builder.add_node("tools", tool_node)
+        graph_builder.add_edge(START, "agent")
+        graph_builder.add_conditional_edges("agent", self.tool_router, {"tools": "tools", END: END})
+        graph_builder.add_edge("tools", "agent")
 
-        # Compile and return the executable graph
+        # Compile and return the runnable graph
         return graph_builder.compile()
 
     def execute(self, input_message: str) -> str:
@@ -326,6 +322,7 @@ class SummarizerAgent:
         and invokes the compiled graph to process it. The final response is
         extracted from the last message in the conversation history.
         """
+
         # Initialize the conversation state with the user's message
         initial_state = {"messages": [HumanMessage(content=input_message)]}
 
