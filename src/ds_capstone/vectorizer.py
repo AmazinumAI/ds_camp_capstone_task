@@ -79,9 +79,7 @@ class TextVectorizer:
         # for performance
         self.model.eval()
 
-    def _average_pool(
-        self, last_hidden_states: Tensor, attention_mask: Tensor
-    ) -> Tensor:
+    def _average_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         """Perform average pooling on the last hidden states using attention mask.
 
         This method computes the average of token embeddings while ignoring

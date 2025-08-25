@@ -203,9 +203,7 @@ class SummarizerAgent:
         last_message = state["messages"][-1]
 
         # Check if the last message contains tool calls that need to be executed
-        if hasattr(last_message, "tool_calls") and getattr(
-            last_message, "tool_calls", None
-        ):
+        if hasattr(last_message, "tool_calls") and getattr(last_message, "tool_calls", None):
             print("Decision: Call tools.")
             return "tools"
         else:
@@ -282,9 +280,7 @@ class SummarizerAgent:
         graph_builder.add_node("agent", self.sum_agent)
         graph_builder.add_node("tools", tool_node)
         graph_builder.add_edge(START, "agent")
-        graph_builder.add_conditional_edges(
-            "agent", self.tool_router, {"tools": "tools", END: END}
-        )
+        graph_builder.add_conditional_edges("agent", self.tool_router, {"tools": "tools", END: END})
         graph_builder.add_edge("tools", "agent")
 
         # Compile and return the runnable graph

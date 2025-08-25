@@ -73,16 +73,12 @@ class FaissSearchHandler:
             raise ValueError("'embeddings' must be a 2D array of shape (n, d).")
 
         if embeddings.shape[1] != self.dimension:
-            raise ValueError(
-                f"Embeddings dimensionality {embeddings.shape[1]} != expected {self.dimension}."
-            )
+            raise ValueError(f"Embeddings dimensionality {embeddings.shape[1]} != expected {self.dimension}.")
 
         emb = self._to_float32(embeddings)
         self.index.add(emb)
 
-    def search(
-        self, query_embedding: np.ndarray, k: int
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def search(self, query_embedding: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         Search for the k most similar vectors to the query embedding.
 
@@ -119,9 +115,7 @@ class FaissSearchHandler:
             raise ValueError("'query_embedding' must be 2D with shape (n_queries, d).")
 
         if query_embedding.shape[1] != self.dimension:
-            raise ValueError(
-                f"Query dimensionality {query_embedding.shape[1]} != expected {self.dimension}."
-            )
+            raise ValueError(f"Query dimensionality {query_embedding.shape[1]} != expected {self.dimension}.")
         q = self._to_float32(query_embedding)
         distances, indices = self.index.search(q, k)
         return distances, indices

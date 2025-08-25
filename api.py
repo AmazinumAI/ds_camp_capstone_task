@@ -20,9 +20,7 @@ async def lifespan(app: FastAPI):  # type: ignore
     app.state.summarizer_graph = SummarizerAgent("qwen3")
     app.state.vectorizer = TextVectorizer(config.EMBEDDING_MODEL_NAME)
     app.state.products_df = load_and_preprocess_data(config.PRODUCTS_CSV_PATH)
-    print(
-        f"Loaded {len(app.state.products_df)} products from {config.PRODUCTS_CSV_PATH}"
-    )
+    print(f"Loaded {len(app.state.products_df)} products from {config.PRODUCTS_CSV_PATH}")
 
     dimension = app.state.vectorizer.model.config.hidden_size
     app.state.search_index = FaissSearchHandler(dimension)
